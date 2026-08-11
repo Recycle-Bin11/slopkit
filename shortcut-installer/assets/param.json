@@ -1,0 +1,11 @@
+{
+  "titleId": "SLOP00001",
+  "applicationCategoryType": 65536,
+  "deeplinkUri": "https://recycle-bin11.github.io/slopkit/",
+  "localizedParameters": {
+    "defaultLanguage": "en-US",
+    "en-US": {
+      "titleName": "Web Browser"
+    }
+  }
+}
