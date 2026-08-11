@@ -177,6 +177,24 @@
   #payloadMenu .payloadTile:focus { outline:3px solid #fff; outline-offset:2px; }
   #payloadMenu .payloadTile img { display:block; width:330px; height:72px;
     max-width:100%; margin:0 auto; }
+  #payloadMenu .payloadText { box-sizing:border-box; display:flex; align-items:center;
+    width:330px; height:72px; max-width:100%; padding:10px 14px;
+    border:2px solid #537bab; border-radius:13px; background:#19263a;
+    color:#f4f7fb; text-align:left; }
+  #payloadMenu .payloadBadge { display:flex; flex:0 0 44px; height:44px;
+    align-items:center; justify-content:center; margin-right:14px;
+    border-radius:50%; background:#448ef7; font-size:12px; font-weight:700; }
+  #payloadMenu .payloadCopy { display:block; min-width:0; }
+  #payloadMenu .payloadCopy strong { display:block; font-size:17px;
+    line-height:1.2; letter-spacing:.02em; }
+  #payloadMenu .payloadCopy small { display:block; margin-top:5px;
+    color:#b8c4d4; font-size:12px; line-height:1.2; }
+  #payloadMenu .payloadTile[data-state="sending"] .payloadText {
+    border-color:#d7a928; background:#30291a; }
+  #payloadMenu .payloadTile[data-state="sent"] .payloadText {
+    border-color:#43bd68; background:#173222; }
+  #payloadMenu .payloadTile[data-state="failed"] .payloadText {
+    border-color:#e05a65; background:#361c25; }
   #payloadMenu .payloadTile.busy { opacity:.42; }
 
   #wrap { display:none !important; }
@@ -203,6 +221,7 @@
   <a class="payloadTile" href="#" data-name="klogsrv-ps5.elf" data-key="klog"><img data-src="../ui/payload-klog-default.png" alt=""></a>
   <a class="payloadTile" href="#" data-name="shsrv-ps5.elf" data-key="shell"><img data-src="../ui/payload-shell-default.png" alt=""></a>
   <a class="payloadTile" href="#" data-name="websrv-ps5.elf" data-key="web"><img data-src="../ui/payload-web-default.png" alt=""></a>
+  <a class="payloadTile" href="#" data-name="pldmgr_v0.5.1.elf" data-key="pldmgr" data-state="default"><span class="payloadText"><span class="payloadBadge">PM</span><span class="payloadCopy"><strong>PAYLOAD MANAGER</strong><small data-default="Manage installed payloads">Manage installed payloads</small></span></span></a>
 </div>
 <div id="nav"></div>
 <div id="arm" hidden>Open this page with <b>?go=1</b> to arm it. Nothing runs
@@ -469,7 +488,7 @@ const rowByKey = new Map();
 let payloadSendBusy = false;
 const PAYLOAD_PORT = 9021;
 const PAYLOAD_BUFFER_SIZE = 0x10000;
-const PAYLOAD_MAX_SIZE = 0x200000;
+const PAYLOAD_MAX_SIZE = 0x400000;
 let payloadSendStore = null;
 let payloadSockaddrStore = null;
 let payloadSocketOptionStore = null;
@@ -497,6 +516,14 @@ function setPayloadTileState(tile, state) {
     const key = tile.getAttribute("data-key");
     if (image && key)
         image.setAttribute("src", "../ui/payload-" + key + "-" + state + ".png");
+    tile.setAttribute("data-state", state);
+    const detail = tile.getElementsByTagName("small")[0];
+    if (detail) {
+        const labels = { sending: "Sending...", sent: "Payload sent",
+            failed: "Send failed" };
+        detail.textContent = labels[state]
+            || detail.getAttribute("data-default") || "";
+    }
 }
 
 function payloadIsListed(name) {
@@ -563,7 +590,7 @@ async function sendPayloadToElfldr(name) {
     if (!bytes.length)
         throw new Error("payload is empty");
     if (bytes.length > PAYLOAD_MAX_SIZE)
-        throw new Error("payload is larger than the 2 MiB limit");
+        throw new Error("payload is larger than the 4 MiB limit");
     if (bytes.length < 4 || bytes[0] !== 0x7f || bytes[1] !== 0x45
         || bytes[2] !== 0x4c || bytes[3] !== 0x46)
         throw new Error("payload does not start with the ELF signature");
