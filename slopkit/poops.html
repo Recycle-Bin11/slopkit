@@ -653,6 +653,7 @@ async function sendPayloadToElfldr(name) {
 async function sendPayloadInPlace(name, tile) {
     if (payloadSendBusy) return;
     payloadSendBusy = true;
+    let succeeded = false;
     const tiles = payloadMenuEl.getElementsByTagName("a");
     for (let i = 0; i < tiles.length; ++i)
         tiles[i].className = "payloadTile busy";
@@ -668,6 +669,7 @@ async function sendPayloadInPlace(name, tile) {
         if (result.closeWarning)
             flushMark("ELF-SOCKET-CLOSE-WARN", "name=" + clean(result.name)
                 + "-why=" + clean(result.closeWarning.message || result.closeWarning));
+        succeeded = true;
     } catch (error) {
         tile.className = "payloadTile";
         setPayloadTileState(tile, "failed");
@@ -687,6 +689,25 @@ async function sendPayloadInPlace(name, tile) {
             try { tile.focus(); } catch (e) { }
         }
     }
+    return succeeded;
+}
+
+async function autoloadPayload(name) {
+    const tiles = payloadMenuEl.getElementsByTagName("a");
+    for (let i = 0; i < tiles.length; ++i) {
+        const tile = tiles[i];
+        if (tile.getAttribute("data-name") !== name) continue;
+        flushMark("ELF-AUTOLOAD", "name=" + clean(name));
+        stage("AUTOLOADING PAYLOAD MANAGER", "ok");
+        const succeeded = await sendPayloadInPlace(name, tile);
+        stage(succeeded ? "PAYLOAD MANAGER SENT" : "PAYLOAD MANAGER FAILED",
+            succeeded ? "ok" : "bad");
+        return succeeded;
+    }
+    flushMark("ELF-AUTOLOAD-FAILED", "name=" + clean(name)
+        + "-why=payload-not-listed");
+    stage("PAYLOAD MANAGER FAILED", "bad");
+    return false;
 }
 
 {
@@ -1465,9 +1486,12 @@ async function runLadder() {
             + passed + " PASS", "ok");
 
     if (payloadSuccess) {
-        flushMark("ELFLDR-MENU-INPAGE",
-            "no-navigation-parked-racers-and-fds-remain-owned-port=9021");
+        flushMark("ELFLDR-AUTOLOAD-INPAGE",
+            "name=pldmgr_v0.5.1.elf-port=9021-delay=3000ms");
         showPayloadMenu();
+        stage("PAYLOAD MANAGER IN 3 SECONDS", "ok");
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        await autoloadPayload("pldmgr_v0.5.1.elf");
     }
 }
 
