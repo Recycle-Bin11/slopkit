@@ -178,34 +178,6 @@
   #payloadMenu .payloadTile img { display:block; width:330px; height:72px;
     max-width:100%; margin:0 auto; }
   #payloadMenu .payloadTile.busy { opacity:.42; }
-  #payloadMenu .payloadTile[data-render="text"] {
-    display:flex; align-items:center; height:72px; padding:10px 13px;
-    border:1px solid #5f7fa9; color:#fff; background:#1a2940;
-    box-shadow:inset 0 1px rgba(255,255,255,.08);
-  }
-  #payloadMenu .payloadTile[data-render="text"] .payloadIcon {
-    box-sizing:border-box; display:flex; align-items:center; justify-content:center;
-    flex:0 0 46px; width:46px; height:46px; margin-right:13px;
-    border-radius:50%; color:#fff; background:#3b82f6;
-    font:700 12px/46px "Segoe UI",system-ui,sans-serif; text-align:center;
-  }
-  #payloadMenu .payloadCopy { display:block; min-width:0; text-align:left; }
-  #payloadMenu .payloadCopy strong {
-    display:block; overflow:hidden; color:#fff; font-size:14px;
-    line-height:20px; letter-spacing:.025em; white-space:nowrap;
-    text-overflow:ellipsis;
-  }
-  #payloadMenu .payloadCopy small {
-    display:block; overflow:hidden; margin-top:3px; color:#afbed1;
-    font-size:12px; line-height:18px; white-space:nowrap;
-    text-overflow:ellipsis;
-  }
-  #payloadMenu .payloadTile[data-state="sending"] { border-color:#e8c35c; background:#3b321b; }
-  #payloadMenu .payloadTile[data-state="sending"] .payloadIcon { background:#d5a817; }
-  #payloadMenu .payloadTile[data-state="sent"] { border-color:#57c879; background:#173524; }
-  #payloadMenu .payloadTile[data-state="sent"] .payloadIcon { background:#219653; }
-  #payloadMenu .payloadTile[data-state="failed"] { border-color:#e16b75; background:#3b1e25; }
-  #payloadMenu .payloadTile[data-state="failed"] .payloadIcon { background:#c23b4a; }
 
   #wrap { display:none !important; }
 </style>
@@ -228,12 +200,8 @@
   <img class="menuTitle" data-src="../ui/payload-menu-title.png" alt="">
   <a class="payloadTile" href="#" data-name="ftpsrv-ps5.elf" data-key="ftp"><img data-src="../ui/payload-ftp-default.png" alt=""></a>
   <a class="payloadTile" href="#" data-name="gdbsrv-ps5.elf" data-key="gdb"><img data-src="../ui/payload-gdb-default.png" alt=""></a>
-  <a class="payloadTile" href="#" data-name="pldmgr_v0.5.1.elf" data-key="pldmgr" data-render="text" data-state="default">
-    <span class="payloadIcon">PM</span><span class="payloadCopy"><strong>PAYLOAD MANAGER</strong><small data-default="Manage installed payloads">Manage installed payloads</small></span>
-  </a>
-  <a class="payloadTile" href="#" data-name="web-browser-installer.elf" data-key="shortcut" data-render="text" data-state="default">
-    <span class="payloadIcon">WB</span><span class="payloadCopy"><strong>ADD PAGE SHORTCUT</strong><small data-default="Add this page to the PS5 home screen">Add this page to the PS5 home screen</small></span>
-  </a>
+  <a class="payloadTile" href="#" data-name="pldmgr_v0.5.1.elf" data-key="pldmgr"><img data-src="../ui/payload-pldmgr-default.png?v=2" alt="Payload Manager"></a>
+  <a class="payloadTile" href="#" data-name="web-browser-installer.elf" data-key="shortcut"><img data-src="../ui/payload-shortcut-default.png" alt="Add Page Shortcut"></a>
   <a class="payloadTile" href="#" data-name="websrv-ps5.elf" data-key="web"><img data-src="../ui/payload-web-default.png" alt=""></a>
 </div>
 <div id="nav"></div>
@@ -528,16 +496,6 @@ function showPayloadMenu() {
 function setPayloadTileState(tile, state) {
     const image = tile.getElementsByTagName("img")[0];
     const key = tile.getAttribute("data-key");
-    tile.setAttribute("data-state", state);
-    if (tile.getAttribute("data-render") === "text") {
-        const subtitle = tile.getElementsByTagName("small")[0];
-        if (subtitle) {
-            const labels = { sending: "Sending payload...", sent: "Payload sent",
-                failed: "Payload failed" };
-            subtitle.textContent = labels[state]
-                || subtitle.getAttribute("data-default") || "";
-        }
-    }
     if (image && key)
         image.setAttribute("src", "../ui/payload-" + key + "-" + state + ".png");
 }
