@@ -31,6 +31,17 @@
     display: flex; flex-direction: column; gap: 14px;
     align-items: center; justify-content: center;
   }
+  #autoloadOption {
+    box-sizing: border-box; display: flex; align-items: center; gap: 11px;
+    width: 100%; padding: 11px 15px; border: 1px solid rgba(255,255,255,.18);
+    border-radius: 12px; color: #eaf2ff; background: rgba(23,34,53,.82);
+    font: 600 16px/1.2 "Segoe UI", system-ui, sans-serif;
+    cursor: pointer;
+  }
+  #autoloadOption:focus-within {
+    border-color: #fff; box-shadow: 0 0 0 4px rgba(91,158,255,.25);
+  }
+  #autoloadPayloadManager { width: 22px; height: 22px; margin: 0; }
   .action {
     box-sizing: border-box; display: inline-block; min-width: 185px;
     padding: 17px 30px; border: 1px solid rgba(255,255,255,.22);
@@ -71,8 +82,12 @@
 <div id="wrap">
   <img id="cat" src="slopkit/cat.jpg" alt="">
   <div id="actions">
+    <label id="autoloadOption">
+      <input id="autoloadPayloadManager" type="checkbox" checked>
+      <span>Autoload Payload Manager</span>
+    </label>
     <a id="start" class="action"
-       href="slopkit/poops.html?go=1&amp;auto=1&amp;trigger=netcontrol&amp;payload=1&amp;v=17"
+       href="slopkit/poops.html?go=1&amp;auto=1&amp;trigger=netcontrol&amp;payload=1&amp;pldmgr=1&amp;v=18"
        tabindex="0">RUN</a>
   </div>
   <div id="status"></div>
@@ -81,6 +96,14 @@
 <script>try {
     var q = new URLSearchParams(location.search);
     var start = document.getElementById("start");
+    var autoload = document.getElementById("autoloadPayloadManager");
+    var target = "slopkit/poops.html?go=1&auto=1&trigger=netcontrol&payload=1&v=18&pldmgr=";
+    function updateTarget() {
+        start.href = target + (autoload.checked ? "1" : "0");
+    }
+    autoload.addEventListener("change", updateTarget);
+    start.addEventListener("click", updateTarget);
+    updateTarget();
     start.focus();
 } catch (e) {}
 
@@ -93,3 +116,4 @@ try {
 
 </body>
 </html>
+
