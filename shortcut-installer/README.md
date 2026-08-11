@@ -19,3 +19,7 @@ make -C shortcut-installer
 The implementation is derived from the GPLv3 app installers in
 `itsPLK/ps5-payload-manager` and `ps5-payload-dev/ftpsrv`; redistribution and
 modification are governed by GPLv3.
+
+The installer links the same AppInstUtil/IPMI libraries used by the ftpsrv PS5
+installer and adds UserService initialization plus on-screen stage notifications.
+

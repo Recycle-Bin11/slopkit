@@ -8,7 +8,8 @@ SOURCE := installer.c
 ASSETS := assets/param.json assets/icon0.png
 
 CFLAGS := -Os -Wall -ffunction-sections -fdata-sections -I$(TARGET)/include
-LDFLAGS := -Wl,--gc-sections -L$(TARGET)/lib -lSceAppInstUtil -lSceUserService
+LDFLAGS := -Wl,--gc-sections -L$(TARGET)/lib \
+	-lSceIpmi -lSceAppInstUtil -lSceUserService
 
 .PHONY: all clean
 
@@ -20,3 +21,4 @@ $(ELF): $(SOURCE) $(ASSETS)
 
 clean:
 	rm -f $(ELF)
+
