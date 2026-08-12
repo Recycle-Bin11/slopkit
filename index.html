@@ -87,19 +87,20 @@
       <span>Autoload Payload Manager</span>
     </label>
     <a id="start" class="action"
-       href="slopkit/poops.html?go=1&amp;auto=1&amp;trigger=netcontrol&amp;payload=1&amp;pldmgr=1&amp;v=18"
+       href="slopkit/poops.html?go=1&amp;auto=1&amp;production=1&amp;trigger=netcontrol&amp;attempts=8&amp;only=ps0_preflight,ps1_prepare,ps3_stage0,ps4_validate,ps5_stage1,ps6_stage2,ps8_stage3,ps9_stage4,ps10_stage5&amp;log=debug&amp;payload=1&amp;v=41#autoload-pldmgr"
        tabindex="0">RUN</a>
   </div>
-  <div id="status"></div>
+  <div id="status">Fresh reboot required before RUN</div>
 </div>
 
 <script>try {
     var q = new URLSearchParams(location.search);
     var start = document.getElementById("start");
     var autoload = document.getElementById("autoloadPayloadManager");
-    var target = "slopkit/poops.html?go=1&auto=1&trigger=netcontrol&payload=1&v=18&pldmgr=";
+    var productionTarget = start.getAttribute("href").split("#")[0];
     function updateTarget() {
-        start.href = target + (autoload.checked ? "1" : "0");
+        start.href = productionTarget
+            + (autoload.checked ? "#autoload-pldmgr" : "#no-autoload-pldmgr");
     }
     autoload.addEventListener("change", updateTarget);
     start.addEventListener("click", updateTarget);
@@ -116,4 +117,3 @@ try {
 
 </body>
 </html>
-

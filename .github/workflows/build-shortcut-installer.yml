@@ -3,7 +3,7 @@ name: Build Web Browser shortcut installer
 on:
   push:
     branches:
-      - agent/add-payload-manager
+      - agent/upstream-stability-update
     paths:
       - "shortcut-installer/**"
       - ".github/workflows/build-shortcut-installer.yml"
