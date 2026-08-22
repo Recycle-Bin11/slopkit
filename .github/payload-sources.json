@@ -1,34 +1,52 @@
 {
   "payloads": {
     "ftpsrv": {
+      "repository": "ps5-payload-dev/ftpsrv",
+      "repository_id": 784444824,
+      "owner_id": 166182419,
+      "asset": "ftpsrv-ps5.elf",
+      "allowed_uploaders": ["github-actions[bot]"],
       "target": "payloads/ftpsrv-ps5.elf",
       "pinned": {
         "tag": "v0.21.1",
+        "release_id": 373896547,
+        "asset_id": 522536065,
         "url": "https://github.com/ps5-payload-dev/ftpsrv/releases/download/v0.21.1/ftpsrv-ps5.elf",
         "size": 191864,
         "sha256": "7d4b31c83eae4e056580482a3a074e1db25922efc74ac1e439473b45d71a5938"
-      },
-      "latest_url": "https://github.com/ps5-payload-dev/ftpsrv/releases/latest/download/ftpsrv-ps5.elf"
+      }
     },
     "shadowmountplus": {
+      "repository": "drakmor/ShadowMountPlus",
+      "repository_id": 1156887604,
+      "owner_id": 1344732,
+      "asset": "shadowmountplus.elf",
+      "allowed_uploaders": ["drakmor"],
       "target": "payloads/shadowmountplus.elf",
       "pinned": {
         "tag": "1.6beta16",
+        "release_id": 345919046,
+        "asset_id": 460269493,
         "url": "https://github.com/drakmor/ShadowMountPlus/releases/download/1.6beta16/shadowmountplus.elf",
         "size": 1457528,
         "sha256": "a35246fb3bb6042b25653b51cdcbc33254b40339342bf1d2dd0d2eceee2ca526"
-      },
-      "latest_url": "https://github.com/drakmor/ShadowMountPlus/releases/latest/download/shadowmountplus.elf"
+      }
     },
     "kstuff": {
+      "repository": "EchoStretch/kstuff-lite",
+      "repository_id": 1146410319,
+      "owner_id": 98502641,
+      "asset": "kstuff.elf",
+      "allowed_uploaders": ["EchoStretch"],
       "target": "payloads/kstuff.elf",
       "pinned": {
         "tag": "v1.10",
+        "release_id": 368976639,
+        "asset_id": 511032930,
         "url": "https://github.com/EchoStretch/kstuff-lite/releases/download/v1.10/kstuff.elf",
         "size": 1572832,
         "sha256": "b1dfe57f367a35374f605127915eda38c76a6ed5d1c729e427955798bd78c66a"
-      },
-      "latest_url": "https://github.com/EchoStretch/kstuff-lite/releases/latest/download/kstuff.elf"
+      }
     }
   }
 }
