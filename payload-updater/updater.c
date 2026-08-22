@@ -2,8 +2,9 @@
  * Online-to-offline payload updater for PlayStation 5.
  *
  * Downloads an explicit, build-verified set of payloads from this repository
- * and atomically replaces their copies under /data/pldmgr/payloads. It never
- * deletes payloads that are not listed in payloads-manifest.json.
+ * and atomically replaces their copies under /data/pldmgr/payloads and
+ * /data/ps5_autoloader. It never deletes payloads that are not listed in
+ * payloads-manifest.json.
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -24,6 +25,7 @@
 
 #define BASE_DATA_DIR "/data/pldmgr"
 #define PAYLOAD_DIR BASE_DATA_DIR "/payloads"
+#define AUTOLOADER_DIR "/data/ps5_autoloader"
 
 #define INCASSET(name, file)                                                   \
   __asm__(".section .rodata\n"                                                 \
@@ -147,33 +149,106 @@ static int file_matches(const char *path, const payload_update_t *update) {
   return strcasecmp(digest, update->sha256) == 0;
 }
 
-static int update_one(const payload_update_t *update) {
-  char final_path[512];
+static int copy_file_atomic(const char *source_path, const char *final_path,
+                            const payload_update_t *update) {
+  unsigned char buffer[16 * 1024];
   char temp_path[520];
+  FILE *source;
+  FILE *destination;
+  size_t count;
+  int failed = 0;
+  int fd;
 
-  if (snprintf(final_path, sizeof(final_path), "%s/%s", PAYLOAD_DIR,
-               update->target) >= (int)sizeof(final_path))
-    return -1;
   if (snprintf(temp_path, sizeof(temp_path), "%s.part", final_path) >=
       (int)sizeof(temp_path))
     return -1;
-
-  if (file_matches(final_path, update)) return 1;
   remove(temp_path);
-  if (download_file(update->url, temp_path) != 0) return -1;
-  if (!file_matches(temp_path, update)) {
-    printf("verification failed: %s\n", update->source);
+
+  source = fopen(source_path, "rb");
+  if (!source) return -1;
+  destination = fopen(temp_path, "wb");
+  if (!destination) {
+    fclose(source);
+    return -1;
+  }
+
+  while ((count = fread(buffer, 1, sizeof(buffer), source)) != 0) {
+    if (fwrite(buffer, 1, count, destination) != count) {
+      failed = 1;
+      break;
+    }
+  }
+  if (ferror(source)) failed = 1;
+  if (fflush(destination) != 0) failed = 1;
+  fd = fileno(destination);
+  if (fd >= 0 && fsync(fd) != 0) failed = 1;
+  if (fclose(destination) != 0) failed = 1;
+  fclose(source);
+
+  if (failed || !file_matches(temp_path, update)) {
+    printf("copy verification failed: %s -> %s\n", source_path, final_path);
     remove(temp_path);
     return -1;
   }
-  chmod(temp_path, 0755);
-  if (rename(temp_path, final_path) != 0) {
-    printf("rename failed: %s -> %s errno=%d\n", temp_path, final_path,
+  if (chmod(temp_path, 0755) != 0 || rename(temp_path, final_path) != 0) {
+    printf("copy install failed: %s -> %s errno=%d\n", temp_path, final_path,
            errno);
     remove(temp_path);
     return -1;
   }
   return 0;
+}
+
+static int update_one(const payload_update_t *update) {
+  char payload_path[512];
+  char autoloader_path[512];
+  char download_path[520];
+  const char *source_path;
+  int payload_current;
+  int autoloader_current;
+  int downloaded = 0;
+  int failed = 0;
+
+  if (snprintf(payload_path, sizeof(payload_path), "%s/%s", PAYLOAD_DIR,
+               update->target) >= (int)sizeof(payload_path))
+    return -1;
+  if (snprintf(autoloader_path, sizeof(autoloader_path), "%s/%s",
+               AUTOLOADER_DIR, update->target) >=
+      (int)sizeof(autoloader_path))
+    return -1;
+  if (snprintf(download_path, sizeof(download_path), "%s/.%s.download.part",
+               PAYLOAD_DIR, update->target) >= (int)sizeof(download_path))
+    return -1;
+
+  payload_current = file_matches(payload_path, update);
+  autoloader_current = file_matches(autoloader_path, update);
+  if (payload_current && autoloader_current) return 1;
+
+  if (payload_current) {
+    source_path = payload_path;
+  } else if (autoloader_current) {
+    source_path = autoloader_path;
+  } else {
+    remove(download_path);
+    if (download_file(update->url, download_path) != 0) return -1;
+    if (!file_matches(download_path, update)) {
+      printf("verification failed: %s\n", update->source);
+      remove(download_path);
+      return -1;
+    }
+    source_path = download_path;
+    downloaded = 1;
+  }
+
+  if (!payload_current &&
+      copy_file_atomic(source_path, payload_path, update) != 0)
+    failed = 1;
+  if (!autoloader_current &&
+      copy_file_atomic(source_path, autoloader_path, update) != 0)
+    failed = 1;
+
+  if (downloaded) remove(download_path);
+  return failed ? -1 : 0;
 }
 
 int main(void) {
@@ -185,8 +260,9 @@ int main(void) {
          (unsigned int)PAYLOAD_UPDATE_COUNT);
 
   if (ensure_directory(BASE_DATA_DIR) != 0 ||
-      ensure_directory(PAYLOAD_DIR) != 0) {
-    notify("Payload Update failed: cannot open %s", PAYLOAD_DIR);
+      ensure_directory(PAYLOAD_DIR) != 0 ||
+      ensure_directory(AUTOLOADER_DIR) != 0) {
+    notify("Payload Update failed: cannot open destination folders");
     return -1;
   }
   if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
@@ -209,7 +285,7 @@ int main(void) {
   curl_global_cleanup();
 
   if (failed == 0) {
-    notify("Payload Update complete: %d updated, %d already current. Offline mode is ready.",
+    notify("Payload Update complete: %d updated, %d current. Both offline folders are ready.",
            updated, current);
     return 0;
   }

@@ -6,9 +6,10 @@
 - `kstuff.elf`
 - `shadowmountplus.elf`
 
-Each file is downloaded to a `.part` file, checked for ELF magic, exact size and
-SHA-256, and then atomically moved into `/data/pldmgr/payloads`. Files not listed
-in `payloads-manifest.json` are never deleted or modified.
+Each file is downloaded once, checked for ELF magic, exact size and SHA-256, and
+then copied atomically into both `/data/pldmgr/payloads` and
+`/data/ps5_autoloader`. Existing `autoload.txt`, Payload Manager and files not
+listed in `payloads-manifest.json` are never deleted or modified.
 
 The manifest header is generated during the build from the actual files under
 `../payloads`, so replacing one of those files requires rebuilding the updater.
