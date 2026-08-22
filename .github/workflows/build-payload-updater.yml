@@ -1,0 +1,83 @@
+name: Build offline payload updater
+
+on:
+  push:
+    branches:
+      - main
+      - agent/payload-updater
+    paths:
+      - "payload-updater/**"
+      - "payloads/ftpsrv-ps5.elf"
+      - "payloads/kstuff.elf"
+      - "payloads/shadowmountplus.elf"
+      - ".github/workflows/build-payload-updater.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 make python3 unzip wget
+          sudo ln -sf /usr/bin/clang-18 /usr/local/bin/clang
+          sudo ln -sf /usr/bin/clang++-18 /usr/local/bin/clang++
+          sudo ln -sf /usr/bin/ld.lld-18 /usr/local/bin/ld.lld
+
+      - name: Install PS5 Payload SDK
+        run: |
+          wget -q https://github.com/ps5-payload-dev/sdk/releases/latest/download/ps5-payload-sdk.zip
+          sudo unzip -q ps5-payload-sdk.zip -d /opt
+          sudo chown -R "$USER:$USER" /opt/ps5-payload-sdk
+
+      - name: Build updater dependencies
+        run: bash payload-updater/tools/build_deps.sh
+
+      - name: Install TLS certificate bundle
+        run: |
+          mkdir -p payload-updater/assets
+          wget -q https://curl.se/ca/cacert.pem -O payload-updater/assets/cacert.pem
+          test -s payload-updater/assets/cacert.pem
+
+      - name: Build updater ELF
+        run: PAYLOAD_SOURCE_REF="${GITHUB_SHA}" make -C payload-updater clean all
+
+      - name: Validate updater
+        run: |
+          test -s payload-updater/payload-updater.elf
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          elf = Path("payload-updater/payload-updater.elf").read_bytes()
+          if not elf.startswith(b"\x7fELF"):
+              raise SystemExit("build output is not an ELF")
+          manifest = json.loads(Path("payload-updater/payloads-manifest.json").read_text())
+          if len(manifest.get("payloads", [])) != 3:
+              raise SystemExit("unexpected payload update count")
+          print(f"validated updater ELF: {len(elf)} bytes")
+          PY
+
+      - name: Publish updater ELF to branch
+        run: |
+          cp payload-updater/payload-updater.elf payloads/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add payloads/payload-updater.elf
+          if git diff --cached --quiet; then
+            echo "Updater ELF is already current"
+          else
+            git commit -m "Build offline payload updater ELF"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: payload-updater
+          path: payload-updater/payload-updater.elf
