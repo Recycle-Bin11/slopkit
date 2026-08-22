@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  pages: write
 
 jobs:
   build:
@@ -81,3 +82,9 @@ jobs:
         with:
           name: payload-updater
           path: payload-updater/payload-updater.elf
+
+      - name: Request GitHub Pages rebuild
+        if: github.ref_name == 'main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/builds"

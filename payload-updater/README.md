@@ -14,6 +14,21 @@ The manifest header is generated during the build from the actual files under
 `../payloads`, so replacing one of those files requires rebuilding the updater.
 The GitHub Actions workflow performs this rebuild automatically.
 
+## Refresh sources from a phone
+
+Run **Update payload sources** from the repository's Actions page. Select one
+payload or `all`, then choose:
+
+- `pinned` to download the exact releases and hashes in
+  `.github/payload-sources.json`.
+- `latest` to deliberately follow each approved upstream repository's latest
+  release asset.
+
+Downloads are limited to the configured GitHub projects and are checked for
+size, ELF64 format, little-endian encoding and x86-64 architecture. If a file
+changes, the workflow commits it, starts a new updater build and requests a
+GitHub Pages rebuild.
+
 ## Build
 
 With the PS5 Payload SDK at `/opt/ps5-payload-sdk` and a current CA bundle at

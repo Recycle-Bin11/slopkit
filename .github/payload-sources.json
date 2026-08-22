@@ -1,0 +1,34 @@
+{
+  "payloads": {
+    "ftpsrv": {
+      "target": "payloads/ftpsrv-ps5.elf",
+      "pinned": {
+        "tag": "v0.21.1",
+        "url": "https://github.com/ps5-payload-dev/ftpsrv/releases/download/v0.21.1/ftpsrv-ps5.elf",
+        "size": 191864,
+        "sha256": "7d4b31c83eae4e056580482a3a074e1db25922efc74ac1e439473b45d71a5938"
+      },
+      "latest_url": "https://github.com/ps5-payload-dev/ftpsrv/releases/latest/download/ftpsrv-ps5.elf"
+    },
+    "shadowmountplus": {
+      "target": "payloads/shadowmountplus.elf",
+      "pinned": {
+        "tag": "1.6beta16",
+        "url": "https://github.com/drakmor/ShadowMountPlus/releases/download/1.6beta16/shadowmountplus.elf",
+        "size": 1457528,
+        "sha256": "a35246fb3bb6042b25653b51cdcbc33254b40339342bf1d2dd0d2eceee2ca526"
+      },
+      "latest_url": "https://github.com/drakmor/ShadowMountPlus/releases/latest/download/shadowmountplus.elf"
+    },
+    "kstuff": {
+      "target": "payloads/kstuff.elf",
+      "pinned": {
+        "tag": "v1.10",
+        "url": "https://github.com/EchoStretch/kstuff-lite/releases/download/v1.10/kstuff.elf",
+        "size": 1572832,
+        "sha256": "b1dfe57f367a35374f605127915eda38c76a6ed5d1c729e427955798bd78c66a"
+      },
+      "latest_url": "https://github.com/EchoStretch/kstuff-lite/releases/latest/download/kstuff.elf"
+    }
+  }
+}
