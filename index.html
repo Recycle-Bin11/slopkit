@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PS5 SlopKit Jailbreak</title>
+  <title>PS5 Jailbreak</title>
   <link rel="stylesheet" href="main.css?v=final">
 </head>
 <body>
   <div class="p-2">
-    <h1 class="text-center">PS5 SlopKit Jailbreak (9.00-12.00)</h1>
+    <h1 class="text-center">PS5 Jailbreak</h1>
     <p class="text-center" id="top-bar-text">Current Firmware: <span class="fw-bold" id="current-fw">Unknown</span></p>
   </div>
 
@@ -32,6 +32,21 @@
       var firmware = firmwareMatch ? firmwareMatch[1] : "";
       document.getElementById("current-fw").textContent = firmware || "Not detected";
     } catch (e) { }
+
+    try {
+      var navigationLinks = [
+        document.getElementById("run-jb"),
+        document.getElementById("run-sender")
+      ];
+      for (var i = 0; i < navigationLinks.length; ++i) {
+        navigationLinks[i].addEventListener("click", function (event) {
+          if (event && event.preventDefault) event.preventDefault();
+          location.replace(this.href);
+          return false;
+        });
+      }
+    } catch (e) { }
+
     try { document.getElementById("run-jb").focus(); } catch (e) { }
   </script>
 </body>
