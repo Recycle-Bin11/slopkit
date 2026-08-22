@@ -1,0 +1,16 @@
+{
+  "payloads": [
+    {
+      "source": "payloads/ftpsrv-ps5.elf",
+      "target": "ftpsrv-ps5.elf"
+    },
+    {
+      "source": "payloads/kstuff.elf",
+      "target": "kstuff.elf"
+    },
+    {
+      "source": "payloads/shadowmountplus.elf",
+      "target": "shadowmountplus.elf"
+    }
+  ]
+}
