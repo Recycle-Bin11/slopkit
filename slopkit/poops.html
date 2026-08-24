@@ -2630,6 +2630,24 @@ function lastRunText() {
         return;
     }
 
+    // Already jailbroken this boot? If an ELF loader owns port 9021 there is
+    // nothing left to run -- go straight to the payload list. On a miss or a
+    // failed probe, fall through into the original exploit ladder unchanged.
+    try {
+        stage("checking for an existing ELF loader on port 9021");
+        await bootChain();
+        await refreshConsoleNetworkInfo();
+        if (await probeExistingElfLoader()) {
+            openExistingPayloadMenu();
+            sendRemoteEvents(false);
+            return;
+        }
+        flushMark("ELFLDR-REUSE-MISS", "127.0.0.1-port=9021-closed");
+    } catch (err) {
+        flushMark("ELFLDR-PROBE-SKIPPED",
+            clean((err && err.message) || String(err)));
+    }
+
     renderNav("", false);
     main().catch(err => {
         const m = (err && err.message) || String(err);
