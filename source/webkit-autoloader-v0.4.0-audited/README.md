@@ -7,7 +7,7 @@ The ELF is a modified build and is not an official itsPLK release binary.
 ## Binary
 
 - Size: 2,164,032 bytes
-- SHA-256: `AAABD6A17FE9E5CD1B6770A019BAB125942F3078C097416C6B8A0B8CDA13E059`
+- SHA-256: `6401B7B004A376107DDB5B12E4DA6AC41F755B1565509987DCDCBD03C4F47DC5`
 - Version embedded in the app and cache path: `0.4.0` (stable)
 - Target: PS5, ELF64 x86-64 PIE
 
@@ -20,9 +20,10 @@ The final installer contains these byte-for-byte verified nested binaries:
 - Poops/P2JB kexp: `46A5CD6BDF92B37AA09F512E05C2229DE1F0F2E7E7A7E60140A288F4CC15B7B6`
 
 The raw-DEFLATE representations of the unified autoloader, shared elfldr,
-modified `app.js`, and modified `style.css` were each found exactly once in
-the final ELF. This verifies the reviewed inputs are the files embedded by the
-file registry, rather than merely files left beside the build output.
+modified `app.js`, modified `style.css`, patched Poops/P2JB pages, and patched
+UMTX2 `main.js` were each found exactly once in the final ELF. This verifies
+the reviewed inputs are the files embedded by the file registry, rather than
+merely files left beside the build output.
 
 ## Pinned source revisions
 
@@ -77,6 +78,10 @@ must be stability-tested on real PS5 hardware.
   source pages are attribution links and are not automatically requested.
 - Success now fills the progress bar green; terminal errors fill it red.
   Matching log messages use higher-contrast backgrounds and borders.
+- When elfldr already owns port 9021, Poops, P2JB and UMTX2 now report
+  `Already Jailbroken!` to the parent app and stop without re-running the
+  kernel exploit or autoloading the bundled payload. A fresh jailbreak still
+  autoloads the bundled payload exactly once.
 
 Payload Manager still intentionally exposes its unauthenticated management
 server on LAN port 8084. elfldr intentionally accepts payloads on port 9021 and

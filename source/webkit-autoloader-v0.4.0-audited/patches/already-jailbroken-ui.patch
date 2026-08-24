@@ -1,0 +1,31 @@
+diff --git a/frontend/autoloader/app.js b/frontend/autoloader/app.js
+--- a/frontend/autoloader/app.js
++++ b/frontend/autoloader/app.js
+@@ -185,6 +185,18 @@
+     }, 1500);
+   }
+ 
++  function onAlreadyJailbroken() {
++    if (finished) return;
++    finished = true;
++    if (mirrorTimer) {
++      clearInterval(mirrorTimer);
++      mirrorTimer = 0;
++    }
++    collapseP2jbStats();
++    uiLog('elfldr is already listening on port 9021.', 'success');
++    updateProgress(100, 'Already Jailbroken!', 'success');
++  }
++
+   /* Mirror slopkit's live screen log (#scr) and stage text (#stage) from the
+      same-origin exploit iframe into our own log view, so the UI shows what
+      the chain is doing (and errors) instead of a generic progress message. */
+@@ -832,6 +844,8 @@
+       if (!data || data.type !== 'wkal') return;
+       if (data.kind === 'autoload') {
+         onAutoloadResult(data);
++      } else if (data.kind === 'already') {
++        onAlreadyJailbroken();
+       }
+     });
+ 

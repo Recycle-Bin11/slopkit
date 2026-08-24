@@ -1146,6 +1146,8 @@ function openExistingPayloadMenu() {
     showVerdict(false, "ELF LOADER ALREADY READY ON PORT 9021");
     stage("ELF LOADER READY -- opening payload menu", "ok");
     showPayloadMenu();
+    const toast = showPayloadToast("Already Jailbroken!");
+    dismissPayloadToast(toast, 3000);
     flushMark("ELFLDR-REUSED", "bind-probe-found-127.0.0.1-port=9021-owned");
 }
 
