@@ -200,6 +200,9 @@
   .homeLink:hover, .homeLink:focus {
     outline:0; background:#a2a2a6; color:#202020;
   }
+  .homeLinkDisabled {
+    opacity:.65; pointer-events:none; cursor:default;
+  }
 
   #payloads-view .payloadGrid {
     display:grid !important;
@@ -383,7 +386,7 @@
       <h2>PS5 SlopKit Payloads (9.00-12.00)</h2>
       <div class="payloadEyebrow" id="payloadNetworkStatus">Listening on console port 9021</div>
       <p id="payloadProgress">Select a payload to send it to the ELF loader.</p>
-      <a class="homeLink" href="../index.html">Home</a>
+      <span class="homeLink homeLinkDisabled" aria-disabled="true">Jailbreak Active</span>
     </div>
     <div class="payloadGrid"></div>
   </div>
