@@ -1,0 +1,37 @@
+diff --git a/src/main.c b/src/main.c
+index e3a49ff..7de7e88 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -10,6 +10,7 @@
+  */
+ 
+ #include <microhttpd.h>
++#include <netinet/in.h>
+ #include <signal.h>
+ #include <stdatomic.h>
+ #include <stdint.h>
+@@ -114,10 +115,23 @@ int main(void) {
+     signal(SIGHUP, SIG_IGN);
+     signal(SIGTERM, SIG_IGN);
+ 
++    /* Keep the temporary installer server reachable only from this console.
++     * Without an explicit address, libmicrohttpd listens on every IPv4
++     * interface even though the browser itself opens 127.0.0.1. */
++    struct sockaddr_in listen_addr;
++    memset(&listen_addr, 0, sizeof(listen_addr));
++    listen_addr.sin_len = sizeof(listen_addr);
++    listen_addr.sin_family = AF_INET;
++    listen_addr.sin_port = htons(WKALI_PORT);
++    listen_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
++
+     /* Start the MHD daemon using a thread pool to handle concurrent AppCache requests. */
+     daemon = MHD_start_daemon(MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_DEBUG,
+                               WKALI_PORT, NULL, NULL, &http_on_request,
+-                              NULL, 
++                              NULL,
++                              MHD_OPTION_SOCK_ADDR_LEN,
++                              (socklen_t)sizeof(listen_addr),
++                              (const struct sockaddr *)&listen_addr,
+                               MHD_OPTION_THREAD_POOL_SIZE, (unsigned int)8,
+                               MHD_OPTION_END);
+ 

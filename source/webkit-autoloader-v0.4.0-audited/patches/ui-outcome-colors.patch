@@ -1,0 +1,127 @@
+diff --git a/frontend/autoloader/app.js b/frontend/autoloader/app.js
+index 986d52c..0883db1 100644
+--- a/frontend/autoloader/app.js
++++ b/frontend/autoloader/app.js
+@@ -4,6 +4,7 @@
+   var splashEl = document.getElementById('splash');
+   var loaderEl = document.getElementById('loader');
+   var logContainer = document.getElementById('logContainer');
++  var progressContainer = document.getElementById('progressContainer');
+   var progressBar = document.getElementById('progressBar');
+   var progressLabel = document.getElementById('progressLabel');
+   var exploitEl = document.getElementById('exploit');
+@@ -87,11 +88,14 @@
+     return entry;
+   }
+ 
+-  function updateProgress(percent, message) {
++  function updateProgress(percent, message, state) {
++    state = state || 'running';
++    progressContainer.className = 'state-' + state;
+     progressBar.style.transform = 'scaleX(' + percent / 100 + ')';
+     if (message) {
+       progressLabel.textContent = message;
+-      uiLog(message, 'info');
++      uiLog(message, state === 'error' ? 'error'
++        : state === 'success' ? 'success' : 'info');
+     }
+   }
+ 
+@@ -160,7 +164,7 @@
+     collapseP2jbStats();
+     if (data.ok) {
+       uiLog('Payload loaded (' + data.bytes + ' bytes sent to elfldr).', 'success');
+-      updateProgress(100, 'Autoload finished.');
++      updateProgress(100, 'Success — payload is running.', 'success');
+ 
+       /* Payload is running as its own process now — unload the iframe to
+          free the memory it held and avoid a browser OOM dialog.
+@@ -172,7 +176,7 @@
+       }
+     } else {
+       uiLog('[ERROR] Autoload failed: ' + (data.why || 'unknown error'), 'error');
+-      updateProgress(0, 'Autoload failed.');
++      updateProgress(100, 'Error — payload could not be loaded.', 'error');
+     }
+     setTimeout(function () {
+       if (data.ok) {
+@@ -821,7 +825,7 @@
+ 
+   function start() {
+     uiLog('WebKit Autoloader by PLK', 'success');
+-    updateProgress(0, 'Waiting to start...');
++    updateProgress(0, 'Waiting to start...', 'running');
+ 
+     window.addEventListener('message', function (event) {
+       var data = event.data;
+@@ -839,7 +843,7 @@
+ 
+     var picked = pickExploit();
+     if (!picked) {
+-      updateProgress(0, 'Unsupported firmware.');
++      updateProgress(100, 'Error — unsupported firmware.', 'error');
+       return;
+     }
+     exploitMode = picked;
+diff --git a/frontend/autoloader/style.css b/frontend/autoloader/style.css
+index e34a675..7eb28ea 100644
+--- a/frontend/autoloader/style.css
++++ b/frontend/autoloader/style.css
+@@ -171,6 +171,10 @@ main[hidden] {
+ 
+ #logContainer .success {
+   color: #7df966;
++  background: rgba(22, 163, 74, 0.16);
++  border-left: 4px solid #22c55e;
++  border-radius: 4px;
++  padding: 0.28rem 0.55rem;
+ }
+ 
+ #logContainer .warning {
+@@ -178,7 +182,12 @@ main[hidden] {
+ }
+ 
+ #logContainer .error {
+-  color: #f87171;
++  color: #fecaca;
++  background: rgba(220, 38, 38, 0.22);
++  border-left: 4px solid #ef4444;
++  border-radius: 4px;
++  padding: 0.28rem 0.55rem;
++  font-weight: 700;
+ }
+ 
+ #progressContainer {
+@@ -205,8 +214,30 @@ main[hidden] {
+   transform: scaleX(0);
+   -webkit-transform-origin: left center;
+   transform-origin: left center;
+-  -webkit-transition: -webkit-transform 0.5s ease-in-out;
+-  transition: transform 0.5s ease-in-out;
++  -webkit-transition: -webkit-transform 0.5s ease-in-out, background 0.3s ease;
++  transition: transform 0.5s ease-in-out, background 0.3s ease;
++}
++
++#progressContainer.state-success {
++  border-color: #22c55e;
++  -webkit-box-shadow: 0 0 18px rgba(34, 197, 94, 0.35);
++  box-shadow: 0 0 18px rgba(34, 197, 94, 0.35);
++}
++
++#progressContainer.state-success #progressBar {
++  background: #16a34a;
++  background: -webkit-linear-gradient(90deg, #15803d 0%, #4ade80 100%);
++}
++
++#progressContainer.state-error {
++  border-color: #ef4444;
++  -webkit-box-shadow: 0 0 18px rgba(239, 68, 68, 0.42);
++  box-shadow: 0 0 18px rgba(239, 68, 68, 0.42);
++}
++
++#progressContainer.state-error #progressBar {
++  background: #dc2626;
++  background: -webkit-linear-gradient(90deg, #b91c1c 0%, #f87171 100%);
+ }
+ 
+ #progressLabel {

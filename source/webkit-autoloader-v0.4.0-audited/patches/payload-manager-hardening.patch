@@ -1,0 +1,139 @@
+diff --git a/src/main.c b/src/main.c
+index f32b645..17939be 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -148,8 +148,8 @@ int main(int argc, char *argv[]) {
+ 
+     pldmgr_log("[PLDMGR] Server is running. Visit /shutdown to exit.\n");
+ 
+-    /* Try cache refresh */
+-    repository_ensure_fresh(0);
++    /* Do not contact a remote repository automatically at startup.
++       Repository refreshes remain available as an explicit user action. */
+ 
+     /* Startup Notification - Only show if browser autostart is off */
+     char current_ip[64] = "unknown";
+diff --git a/src/repository.c b/src/repository.c
+index 49ad494..22fa449 100644
+--- a/src/repository.c
++++ b/src/repository.c
+@@ -71,20 +71,14 @@ int download_to_file(const char *url, const char *out_path) {
+         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+ 
++        /* Only allow authenticated HTTPS, including redirects. */
++        curl_easy_setopt(curl, CURLOPT_PROTOCOLS_STR, "https");
++        curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS_STR, "https");
++
+         /* Allow redirection */
+         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+         res = curl_easy_perform(curl);
+ 
+-        /* If SSL verification fails (e.g., due to mbedTLS Quirks with Let's Encrypt / Sectigo
+-           cross-signed roots, or user's time drift), fallback to insecure download.
+-           We verify checksums later anyway for ELFs! */
+-        if (res == CURLE_PEER_FAILED_VERIFICATION) {
+-            pldmgr_log("[PLDMGR] SSL verification failed. Retrying insecurely: %s\n", url);
+-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+-            res = curl_easy_perform(curl);
+-        }
+-
+         long http_code = 0;
+         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+ 
+@@ -513,21 +507,26 @@ int repository_install_commit(const char *filename, const char *uploaded_temp_pa
+     snprintf(final_path, sizeof(final_path), "%s/%s", payload_dir, items[found].filename);
+     snprintf(details_path, sizeof(details_path), "%s/%s.json", payload_dir, items[found].filename);
+ 
+-    if (strlen(items[found].checksum) == 64) {
+-        char calculated[65];
+-        if (compute_sha256_file(uploaded_temp_path, calculated) != 0) {
+-            free(items);
+-            remove(uploaded_temp_path);
+-            snprintf(msg_buf, msg_buf_size, "Checksum computation failed");
+-            return -1;
+-        }
+-        if (strcasecmp(calculated, items[found].checksum) != 0) {
+-            pldmgr_log("[PLDMGR] !!! Checksum mismatch for %s\n", items[found].filename);
+-            free(items);
+-            remove(uploaded_temp_path);
+-            snprintf(msg_buf, msg_buf_size, "Checksum mismatch");
+-            return -1;
+-        }
++    if (strlen(items[found].checksum) != 64) {
++        free(items);
++        remove(uploaded_temp_path);
++        snprintf(msg_buf, msg_buf_size, "Missing required SHA-256 checksum");
++        return -1;
++    }
++
++    char calculated[65];
++    if (compute_sha256_file(uploaded_temp_path, calculated) != 0) {
++        free(items);
++        remove(uploaded_temp_path);
++        snprintf(msg_buf, msg_buf_size, "Checksum computation failed");
++        return -1;
++    }
++    if (strcasecmp(calculated, items[found].checksum) != 0) {
++        pldmgr_log("[PLDMGR] !!! Checksum mismatch for %s\n", items[found].filename);
++        free(items);
++        remove(uploaded_temp_path);
++        snprintf(msg_buf, msg_buf_size, "Checksum mismatch");
++        return -1;
+     }
+ 
+     /* Verify succeeded, now clear previous payload and metadata. */
+diff --git a/src/sources.c b/src/sources.c
+index 3ad62bb..7def1e8 100644
+--- a/src/sources.c
++++ b/src/sources.c
+@@ -609,24 +609,30 @@ int sources_multi_repository_install(const char *filename, const char *source_id
+     snprintf(final_path,   sizeof(final_path),   "%s/%s",      payload_dir, items[found].filename);
+     snprintf(details_path, sizeof(details_path), "%s/%s.json", payload_dir, items[found].filename);
+ 
+-    /* Checksum verification (optional — skip if checksum absent) */
+-    if (strlen(items[found].checksum) == 64) {
+-        char calculated[65];
+-        if (compute_sha256_file(tmp_path, calculated) != 0) {
+-            if (items) free(items);
+-            free(sources);
+-            remove(tmp_path);
+-            snprintf(msg, msg_size, "Checksum computation failed");
+-            return -1;
+-        }
+-        if (strcasecmp(calculated, items[found].checksum) != 0) {
+-            pldmgr_log("[PLDMGR] !!! Checksum mismatch for %s\n", items[found].filename);
+-            if (items) free(items);
+-            free(sources);
+-            remove(tmp_path);
+-            snprintf(msg, msg_size, "Checksum mismatch");
+-            return -1;
+-        }
++    /* Every remotely downloaded ELF must be pinned by SHA-256. */
++    if (strlen(items[found].checksum) != 64) {
++        if (items) free(items);
++        free(sources);
++        remove(tmp_path);
++        snprintf(msg, msg_size, "Missing required SHA-256 checksum");
++        return -1;
++    }
++
++    char calculated[65];
++    if (compute_sha256_file(tmp_path, calculated) != 0) {
++        if (items) free(items);
++        free(sources);
++        remove(tmp_path);
++        snprintf(msg, msg_size, "Checksum computation failed");
++        return -1;
++    }
++    if (strcasecmp(calculated, items[found].checksum) != 0) {
++        pldmgr_log("[PLDMGR] !!! Checksum mismatch for %s\n", items[found].filename);
++        if (items) free(items);
++        free(sources);
++        remove(tmp_path);
++        snprintf(msg, msg_size, "Checksum mismatch");
++        return -1;
+     }
+ 
+     payload_mgr_remove_old_files(payload_dir, items[found].filename);
