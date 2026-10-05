@@ -407,6 +407,7 @@
 
 <div id="console" hidden></div>
 
+<script src="../payloads/catalog.js?v=auto-payloads-1"></script>
 <script src="rop.js?v=final"></script>
 <script src="main.js?v=final"></script>
 <script>window.offsetsReady = new Promise(function (res, rej) {
@@ -973,7 +974,7 @@ let payloadSendTimeoutStore = null;
 let payloadSenderBlocked = "";
 let consoleNetworkInfo = { ip: "", name: "" };
 
-const PAYLOADS = Object.freeze([
+const FALLBACK_PAYLOADS = Object.freeze([
     { title: "ftpsrv", description: "FTP server. Runs on port 2121.",
         name: "ftpsrv-ps5.elf", info: "ftpsrv-ps5.elf - john-tornblom" },
     { title: "ps5-kstuff", description: "Kernel support payload and FPKG enabler.",
@@ -991,6 +992,8 @@ const PAYLOADS = Object.freeze([
     { title: "ShadowMountPlus", description: "Mount and manage game images.",
         name: "shadowmountplus.elf", info: "shadowmountplus.elf - Drakmor" }
 ]);
+const PAYLOADS = Object.freeze(Array.isArray(window.SLOPKIT_PAYLOADS)
+    ? window.SLOPKIT_PAYLOADS : FALLBACK_PAYLOADS);
 
 function populatePayloadButtons() {
     const grid = payloadMenuEl.getElementsByClassName("payloadGrid")[0];
