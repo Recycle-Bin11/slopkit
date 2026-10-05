@@ -1,0 +1,22 @@
+name: Check payload catalog
+on:
+  pull_request:
+    paths:
+      - 'payloads/**'
+      - '_data/payloads.json'
+      - 'slopkit/poops.html'
+      - '.github/scripts/check_payload_catalog.cjs'
+      - '.github/workflows/check-payload-catalog.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
+      - run: node .github/scripts/check_payload_catalog.cjs _site

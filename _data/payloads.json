@@ -1,0 +1,59 @@
+{
+  "ftpsrv-ps5.elf": {
+    "title": "ftpsrv",
+    "description": "FTP server. Runs on port 2121.",
+    "info": "ftpsrv-ps5.elf - john-tornblom",
+    "order": 0
+  },
+  "kstuff.elf": {
+    "title": "ps5-kstuff",
+    "description": "Kernel support payload and FPKG enabler.",
+    "info": "kstuff.elf - EchoStretch",
+    "order": 1
+  },
+  "PLK.elf": {
+    "title": "PLK Manager",
+    "description": "Payload management tools.",
+    "info": "PLK.elf - PLK",
+    "order": 2
+  },
+  "garlic-savemgr.elf": {
+    "title": "Garlic SaveMgr",
+    "description": "Local PS5 save manager. Web UI on port 8082.",
+    "info": "Garlic SaveMgr v1.7 - earthonion",
+    "order": 3
+  },
+  "webkit-autoloader-installer_v0.4.0-audited.elf": {
+    "title": "Install Offline Mode",
+    "description": "Install the audited offline autoloader.",
+    "info": "v0.4.0 audited build - Recycle-Bin11",
+    "order": 4
+  },
+  "web-browser-installer.elf": {
+    "title": "Add Page Shortcut",
+    "description": "Install this page on the PS5 home screen.",
+    "info": "web-browser-installer.elf - Recycle-Bin11",
+    "order": 5
+  },
+  "payload-updater.elf": {
+    "title": "Update Payloads",
+    "description": "Refresh local payloads for offline mode.",
+    "info": "Updates 3 payloads in /data/pldmgr/payloads",
+    "order": 6
+  },
+  "shadowmountplus.elf": {
+    "title": "ShadowMountPlus",
+    "description": "Mount and manage game images.",
+    "info": "shadowmountplus.elf - Drakmor",
+    "order": 7
+  },
+  "elfldr-ps5-1360.elf": {
+    "hidden": true
+  },
+  "pldmgr_v0.5.1.elf": {
+    "hidden": true
+  },
+  "webkit-autoloader-installer_v0.3.1.elf": {
+    "hidden": true
+  }
+}
