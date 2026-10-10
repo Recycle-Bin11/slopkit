@@ -1,0 +1,8 @@
+{
+  "source_commit": "beced648f9b3a1826261881c2b65e63e13ce283b",
+  "sdk": "v0.42",
+  "sdk_sha256": "8cfbc7cd5811e719eb4f0c47eea668d3dc7b40bc8ab11c4a5031d40c23ec02da",
+  "compiler": "LLVM 18",
+  "binary_sha256": "6698be563e37ee81d29345783e179eda16b48ea802eed36335137939b59f8f5e",
+  "binary_size": 115952
+}

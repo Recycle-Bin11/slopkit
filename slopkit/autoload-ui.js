@@ -109,10 +109,23 @@ root.mountAutoloadEditor = function (runtime) {
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         await read();
     });
-    closeButton.addEventListener("click", () => {
+    closeButton.addEventListener("click", async () => {
         if (busy) return;
+        if (io && io.dispose) {
+            busy = true; controls();
+            try { await io.dispose(); } catch (error) { message(error.message); }
+            finally { busy = false; }
+        }
+        io = null; if (runtime.resetIO) runtime.resetIO();
         panel.hidden = true; opened = false; runtime.release();
-        original = null; rows = []; open.setAttribute("aria-expanded", "false"); open.focus();
+        original = null; rows = []; open.setAttribute("aria-expanded", "false"); if (new URLSearchParams(location.search).get("autoload") === "1") {
+            location.replace("../index.html");
+        } else open.focus();
+    });
+    const home = document.getElementById("autoloadHome");
+    if (home) home.addEventListener("click", event => {
+        event.preventDefault();
+        if (!busy) closeButton.click();
     });
     readButton.addEventListener("click", read);
     document.getElementById("autoloadAddDelay").addEventListener("click", () => {

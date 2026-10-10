@@ -5,6 +5,9 @@ on:
       - 'slopkit/**'
       - '.github/scripts/check_autoload_editor.cjs'
       - '.github/scripts/check_autoload_ftp.cjs'
+      - '.github/scripts/check_autoload_bridge.cjs'
+      - 'autoload-helper/**'
+      - 'index.html'
       - '.github/workflows/check-autoload-editor.yml'
   push:
     branches: [main]
@@ -13,6 +16,9 @@ on:
       - 'slopkit/poops.html'
       - '.github/scripts/check_autoload_editor.cjs'
       - '.github/scripts/check_autoload_ftp.cjs'
+      - '.github/scripts/check_autoload_bridge.cjs'
+      - 'autoload-helper/**'
+      - 'index.html'
       - '.github/workflows/check-autoload-editor.yml'
 permissions:
   contents: read
@@ -22,6 +28,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: |
+          cc -DAUTOLOAD_HOST_TEST -Wall -Wextra -Werror -o /tmp/autoload-helper-test autoload-helper/bridge.c
+          node --check slopkit/autoload-bridge.js
+          node .github/scripts/check_autoload_bridge.cjs /tmp/autoload-helper-test
           node --check slopkit/autoload-core.js
           node --check slopkit/autoload-ps5.js
           node --check slopkit/autoload-ui.js

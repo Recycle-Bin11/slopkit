@@ -56,11 +56,13 @@
   "webkit-autoloader-installer_v0.3.1.elf": {
     "hidden": true
   },
-
   "kstuff-1.13-fpkg-dr-test5.elf": {
     "title": "Kstuff FPKG",
     "description": "Kstuff with FPKG support.",
     "info": "kstuff-1.13-fpkg-dr-test5.elf - Drakmor",
     "hidden": false
+  },
+  "autoload-editor-helper.elf": {
+    "hidden": true
   }
 }
