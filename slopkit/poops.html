@@ -368,6 +368,23 @@
 #autoloadStatus { padding:12px; border-left:4px solid #7babe5; background:#151c29; overflow-wrap:anywhere; }
 @media(max-width:700px) { #autoloadChoices { grid-template-columns:1fr; } #autoloadEditor { padding:12px; } }
 
+
+/* PS5 WebKit: avoid alpha hex colors and explicitly paint modal text. */
+#autoloadEditor { top:0; right:0; bottom:0; left:0; background:#0c0c0f; opacity:1; }
+#autoloadEditor, #autoloadEditor * {
+    visibility:visible !important;
+    -webkit-text-fill-color:#fff !important;
+    color:#fff !important;
+    text-shadow:none;
+    font-family:Arial,sans-serif !important;
+}
+#autoloadEditor h2, #autoloadEditor h3, #autoloadEditor p,
+#autoloadEditor span, #autoloadEditor label, #autoloadPreview, #autoloadStatus {
+    opacity:1 !important;
+}
+#autoloadEditor input[type=number] { background:#151c29; border:1px solid #8592a5; }
+#autoloadEditor button:disabled { opacity:1; color:#9ba5b4 !important; -webkit-text-fill-color:#9ba5b4 !important; background:#151a23; }
+
 </style>
 </head>
 <body class="quiet">
@@ -471,7 +488,8 @@
 <script src="syscalls.js"></script>
 <script src="autoload-core.js?v=1"></script>
 <script src="autoload-ps5.js?v=1"></script>
-<script src="autoload-ui.js?v=1"></script>
+<script src="autoload-ftp.js?v=2"></script>
+<script src="autoload-ui.js?v=2"></script>
 
 <script type="module">import { establishPrimitive, fakeCellReleased } from "./core.js?v=final";
 import { installWindowP, pairStatus } from "./mem.js?v=final";
@@ -2504,7 +2522,37 @@ window.mountAutoloadEditor({
         if (payloadSenderBlocked) throw new Error(payloadSenderBlocked);
     },
     io: () => {
-        if (!autoloadIO) autoloadIO = window.createAutoloadPS5IO({ mem, sys });
+        if (!autoloadIO) {
+            const direct = window.createAutoloadPS5IO({ mem, sys });
+            const ftp = window.createAutoloadFTP(window.createAutoloadTCP({
+                mem, sys, block: message => { payloadSenderBlocked = message; }
+            }));
+            let selected = null;
+            autoloadIO = {
+                mode: () => selected === ftp ? "FTP local (2121)" : "acceso directo",
+                read: async (name, max) => {
+                    if (selected) return selected.read(name, max);
+                    try {
+                        const bytes = await direct.read(name, max);
+                        selected = direct; return bytes;
+                    } catch (directError) {
+                        if (chainDead || payloadSenderBlocked) throw directError;
+                        try {
+                            const bytes = await ftp.read(name, max);
+                            selected = ftp; return bytes;
+                        } catch (ftpError) {
+                            throw new Error("No se pudo leer /data/ps5_autoloader/" + name
+                                + ". Acceso directo: " + directError.message
+                                + " FTP: " + ftpError.message
+                                + ". Iniciá ftpsrv en la PS5 (puerto 2121), comprobá la ruta y pulsá Leer desde PS5.");
+                        }
+                    }
+                },
+                create: (name, bytes) => selected.create(name, bytes),
+                rename: (from, to) => selected.rename(from, to),
+                remove: name => selected.remove(name)
+            };
+        }
         return autoloadIO;
     },
     acquire: () => {
