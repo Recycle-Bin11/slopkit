@@ -1,0 +1,27 @@
+name: Check autoload editor
+on:
+  pull_request:
+    paths:
+      - 'slopkit/**'
+      - '.github/scripts/check_autoload_editor.cjs'
+      - '.github/workflows/check-autoload-editor.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'slopkit/autoload-*.js'
+      - 'slopkit/poops.html'
+      - '.github/scripts/check_autoload_editor.cjs'
+      - '.github/workflows/check-autoload-editor.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          node --check slopkit/autoload-core.js
+          node --check slopkit/autoload-ps5.js
+          node --check slopkit/autoload-ui.js
+          node .github/scripts/check_autoload_editor.cjs
+          node --check /tmp/slopkit-autoload-module.mjs

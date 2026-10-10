@@ -347,6 +347,27 @@
     display:block; padding:.5rem; color:#ccc; text-align:center; font-size:.8rem; }
 
   #wrap { display:none !important; }
+
+#editAutoload { padding:.5rem 1rem; margin:.5rem; border:1px solid #aaa; border-radius:.6rem; background:#202125; color:#fff; font-size:1rem; cursor:pointer; }
+#autoloadEditor[hidden] { display:none !important; }
+#autoloadEditor { position:fixed; inset:0; z-index:10000; overflow-y:auto; background:#080a0ef5; font:18px/1.5 Arial,sans-serif; padding:24px; box-sizing:border-box; color:#fff; }
+.autoloadCard { max-width:1000px; margin:0 auto; }
+.autoloadCard h2 { font-size:28px; color:#fff; }
+.autoloadCard h3 { margin:20px 0 8px; }
+.autoloadCard p { margin:8px 0; }
+.autoloadCard button { border:1px solid #8592a5; background:#242d3e; color:#fff; border-radius:8px; padding:10px 16px; margin:4px; font:inherit; cursor:pointer; }
+.autoloadCard button:focus, .autoloadCard input:focus { outline:3px solid #ebcb8b; }
+.autoloadCard button:disabled { opacity:.4; cursor:default; }
+.autoloadCard input[type=number] { width:125px; font:inherit; margin:4px 10px; padding:8px; }
+#autoloadSteps { padding-left:32px; }
+#autoloadSteps li { padding:8px; margin:8px 0; background:#151c29; border-radius:8px; overflow-wrap:anywhere; }
+#autoloadChoices { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+#autoloadChoices label { padding:12px; background:#151c29; border-radius:8px; overflow-wrap:anywhere; cursor:pointer; }
+#autoloadChoices input { width:22px; height:22px; vertical-align:middle; }
+#autoloadPreview { padding:16px; background:#151c29; color:#fff; white-space:pre-wrap; }
+#autoloadStatus { padding:12px; border-left:4px solid #7babe5; background:#151c29; overflow-wrap:anywhere; }
+@media(max-width:700px) { #autoloadChoices { grid-template-columns:1fr; } #autoloadEditor { padding:12px; } }
+
 </style>
 </head>
 <body class="quiet">
@@ -386,6 +407,7 @@
       <h2>PS5 SlopKit Payloads (9.00-12.00)</h2>
       <div class="payloadEyebrow" id="payloadNetworkStatus">Listening on console port 9021</div>
       <p id="payloadProgress">Select a payload to send it to the ELF loader.</p>
+<button id="editAutoload" type="button" aria-controls="autoloadEditor" aria-expanded="false">Editar autoload</button>
       <span class="homeLink homeLinkDisabled" aria-disabled="true">Jailbreak Active</span>
     </div>
     <div class="payloadGrid"></div>
@@ -402,6 +424,32 @@
     </div>
   </div>
 </div>
+
+<section id="autoloadEditor" hidden role="dialog" aria-modal="true" aria-labelledby="autoloadHeading">
+  <div class="autoloadCard">
+    <h2 id="autoloadHeading">Editar autoload</h2>
+    <p>/data/ps5_autoloader/autoload.txt</p>
+    <p>Seleccionar copia el ELF a esa carpeta al guardar. Quitar un payload también elimina su archivo al guardar. Las esperas se indican en milisegundos.</p>
+    <p>Este editor modifica la configuración de /data. Si existe una configuración en USB o específica de una aplicación, el autoloader puede darle prioridad.</p>
+    <div class="autoloadActions">
+      <button id="autoloadRead" type="button">Leer desde PS5 / descartar cambios</button>
+      <button id="autoloadClose" type="button">Cerrar sin guardar</button>
+    </div>
+    <p id="autoloadStatus" role="status" aria-live="polite"></p>
+    <h3>Secuencia</h3>
+    <ol id="autoloadSteps"></ol>
+    <button id="autoloadAddDelay" type="button">Agregar espera de 500 ms</button>
+    <h3>Payloads disponibles</h3>
+    <div id="autoloadChoices"></div>
+    <h3>Vista previa del TXT</h3>
+    <pre id="autoloadPreview"></pre>
+    <div class="autoloadActions">
+      <button id="autoloadSave" type="button">Guardar en PS5</button>
+      <button id="autoloadExport" type="button">Descargar TXT</button>
+    </div>
+  </div>
+</section>
+
 <div id="payloadToastContainer"></div>
 <div id="slopkitFooter">slopkit final</div>
 
@@ -421,6 +469,9 @@
 });
 </script>
 <script src="syscalls.js"></script>
+<script src="autoload-core.js?v=1"></script>
+<script src="autoload-ps5.js?v=1"></script>
+<script src="autoload-ui.js?v=1"></script>
 
 <script type="module">import { establishPrimitive, fakeCellReleased } from "./core.js?v=final";
 import { installWindowP, pairStatus } from "./mem.js?v=final";
@@ -2442,6 +2493,39 @@ function lastRunText() {
         + (LAST_RUN.latchDetail ? "\n  latch detail recorded by that run: "
             + LAST_RUN.latchDetail : "");
 }
+
+
+let autoloadIO = null;
+window.mountAutoloadEditor({
+    catalog: () => PAYLOADS,
+    ready: () => {
+        if (!elfldrSpawned || !P || !chain || chainDead)
+            throw new Error("Abrí el editor después del jailbreak y con el cargador listo.");
+        if (payloadSenderBlocked) throw new Error(payloadSenderBlocked);
+    },
+    io: () => {
+        if (!autoloadIO) autoloadIO = window.createAutoloadPS5IO({ mem, sys });
+        return autoloadIO;
+    },
+    acquire: () => {
+        if (payloadSendBusy || runInFlight) throw new Error("Esperá a que termine la operación actual.");
+        payloadSendBusy = true;
+        const tiles = payloadMenuEl.getElementsByClassName("payloadTile");
+        for (let i = 0; i < tiles.length; i++) setPayloadTileBusy(tiles[i], true);
+    },
+    release: () => {
+        payloadSendBusy = !!payloadSenderBlocked;
+        const tiles = payloadMenuEl.getElementsByClassName("payloadTile");
+        for (let i = 0; i < tiles.length; i++) setPayloadTileBusy(tiles[i], !!payloadSenderBlocked);
+    },
+    toast: message => dismissPayloadToast(showPayloadToast(message), 5000),
+    download: async name => {
+        if (!payloadIsListed(name)) throw new Error("Payload fuera del catálogo.");
+        const response = await fetch("../payloads/" + encodeURIComponent(name), { cache: "no-store" });
+        if (!response.ok) throw new Error("Descarga falló: HTTP " + response.status);
+        return new Uint8Array(await response.arrayBuffer());
+    }
+});
 
 (async function entry() {
 
