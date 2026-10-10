@@ -38,3 +38,14 @@ An existing autoload.txt and sufficient /data permissions are required. Merely d
 The CI test uses an in-memory filesystem and a simulated syscall runtime to cover the supplied sequence, CRLF, delays, scoped paths, ELF validation, backups, stale edits, failures before commit, cleanup warnings, special-line preservation, partial reads/writes and fd closure. Syntax checks include the full inline page module.
 
 This has not been tested on real PS5 hardware. The original jailbreak implementation is unchanged; only the editor integration and file operations were added.
+
+
+## PS5 file-access fallback (v2)
+
+When the first direct read fails, the editor tries the console's FTP payload at **127.0.0.1:2121**. Start ftpsrv-ps5.elf from the payload menu (or your autoload sequence) before opening the editor. Only anonymous login is currently supported. No external FTP address can be entered: passive data connections also use loopback, regardless of the advertised PASV host.
+
+Once a successful read chooses a transport, all saves use that same transport; the editor never switches halfway through a write. The existing backup, staging, conflict checks, byte-for-byte readback and delayed deletion rules also apply to FTP. FTP completion/readback is checked, but the FTP server does not expose an explicit fsync or O_EXCL/O_NOFOLLOW equivalent. Collision checks use SIZE and unique temporary names. An access-denied response never permits STOR. Use the expected ftpsrv server; a custom authenticated server requires additional configuration.
+
+The GitHub Pages UI cannot inherit a separate ELF's filesystem permissions. In ps5-webkit-autoloader, payloads/autoload.js sends autoload.elf to elfldr; the independent ps5-unified-autoloader process opens the TXT using fopen. It is not the JavaScript page that opens the file.
+
+The PS5 modal now uses an opaque background, explicit WebKit text colors and a layout/animation-frame repaint before starting file I/O. First-open hardware rendering remains to be checked on the console.

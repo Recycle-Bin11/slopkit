@@ -12,7 +12,14 @@ root.mountAutoloadEditor = function (runtime) {
     const saveButton = document.getElementById("autoloadSave");
     const closeButton = document.getElementById("autoloadClose");
     let io = null, original = null, rows = [], busy = false, opened = false;
-    function message(text) { status.textContent = text; }
+    function repaint() {
+        void panel.offsetHeight;
+        if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => {
+            panel.style.visibility = "visible";
+            void panel.offsetHeight;
+        });
+    }
+    function message(text) { status.textContent = text; repaint(); }
     function controls() {
         panel.querySelectorAll("button, input").forEach(el => { el.disabled = busy; });
         saveButton.disabled = busy || original === null;
@@ -89,7 +96,7 @@ root.mountAutoloadEditor = function (runtime) {
             const text = C.decode(await io.read("autoload.txt", C.MAX_TEXT));
             const parsed = C.parse(text); C.serialize(parsed);
             original = text; rows = parsed;
-            message("Configuración cargada. Los cambios se aplican al guardar.");
+            message("Configuración cargada (" + (io.mode ? io.mode() : "acceso directo") + "). Los cambios se aplican al guardar.");
         });
     }
     open.addEventListener("click", async () => {
@@ -97,7 +104,10 @@ root.mountAutoloadEditor = function (runtime) {
         try { runtime.acquire(); opened = true; }
         catch (error) { runtime.toast(error.message); return; }
         panel.hidden = false; open.setAttribute("aria-expanded", "true");
-        render(); readButton.focus(); await read();
+        panel.scrollTop = 0;
+        render(); repaint(); readButton.focus();
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        await read();
     });
     closeButton.addEventListener("click", () => {
         if (busy) return;
