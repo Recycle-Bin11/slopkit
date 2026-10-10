@@ -3,6 +3,7 @@
  * No payload execution, FTP, outbound connections, credential patching or LAN listener.
  */
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -151,7 +152,7 @@ int main(int argc, char **argv) {
     struct sockaddr_in address;memset(&address,0,sizeof(address));
     address.sin_family=AF_INET;address.sin_port=htons((uint16_t)port);
     address.sin_addr.s_addr=htonl(INADDR_LOOPBACK);
-#ifdef __FreeBSD__
+#ifndef AUTOLOAD_HOST_TEST
     address.sin_len=sizeof(address);
 #endif
     if (bind(listener,(struct sockaddr *)&address,sizeof(address)) || listen(listener,1)) {

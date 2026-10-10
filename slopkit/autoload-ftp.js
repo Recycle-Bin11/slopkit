@@ -116,13 +116,13 @@ root.createAutoloadTCP = function (runtime) {
     const sockets = new Set();
     async function call(num, ...args) {
         const result = await runtime.sys(num, ...args);
-        if (result.failed || result.s32 < 0) throw new Error("FTP local: syscall " + num + ": " + result.errText);
+        if (result.failed || result.s32 < 0) throw new Error("Conexión local: syscall " + num + ": " + result.errText);
         return result.s32;
     }
     async function close(fd) {
         if (!sockets.has(fd)) return;
         try { await call(6, fd); sockets.delete(fd); }
-        catch (error) { if (runtime.block) runtime.block("Socket FTP sin cierre confirmado; reiniciá la PS5."); throw error; }
+        catch (error) { if (runtime.block) runtime.block("Socket local sin cierre confirmado; reiniciá la PS5."); throw error; }
     }
     return {
         async connect(port) {
@@ -139,7 +139,7 @@ root.createAutoloadTCP = function (runtime) {
         },
         async read(fd, max) {
             const n = await call(3, fd, store.ptr, Math.min(max, 65536));
-            if (n > Math.min(max, 65536)) throw new Error("Lectura FTP inválida.");
+            if (n > Math.min(max, 65536)) throw new Error("Lectura local inválida.");
             return store.u8.slice(0, n);
         },
         async write(fd, bytes) {
@@ -149,9 +149,9 @@ root.createAutoloadTCP = function (runtime) {
                 store.u8.set(bytes.subarray(off, off + size));
                 let sent = 0;
                 while (sent < size) {
-                    if (++operations > 8192 || Date.now() > deadline) throw new Error("Escritura FTP agotó el tiempo.");
+                    if (++operations > 8192 || Date.now() > deadline) throw new Error("Escritura local agotó el tiempo.");
                     const n = await call(4, fd, store.ptr.add32(sent), size - sent);
-                    if (n <= 0 || n > size - sent) throw new Error("Escritura FTP incompleta.");
+                    if (n <= 0 || n > size - sent) throw new Error("Escritura local incompleta.");
                     sent += n;
                 }
                 off += size;
