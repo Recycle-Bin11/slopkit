@@ -1,6 +1,6 @@
 # PS5 autoload editor
 
-Open the hosted Slopkit payload menu after the jailbreak, then choose **Editar autoload**.
+Choose **Editar autoload** directly below **Payloads (sender)** in the main menu.
 The editor reads **/data/ps5_autoloader/autoload.txt inside the console**.
 
 - Select payloads from the hosted catalog to add them at the end.
@@ -27,9 +27,9 @@ Existing payloads kept in the sequence are not redownloaded or replaced. A selec
 
 ## Runtime and limits
 
-This uses the existing post-jailbreak ROP runtime to call open/read/write/fsync/rename/unlink. It does not install a helper ELF or expose an HTTP service. The file adapter scopes names to /data/ps5_autoloader/ and opens files with O_NOFOLLOW; staging files and backups use O_EXCL. The parent directory is assumed to be the user's normal autoloader directory. The page locks the shared syscall sender while the editor is open.
+The page automatically sends the dedicated autoload-editor-helper.elf to the local ELF loader (9021). That native process reads and writes the files; ftpsrv is not required. It listens only on 127.0.0.1:9025, accepts one session and closes when the editor disconnects or after 15 minutes of inactivity. The helper restricts operations to an opened /data/ps5_autoloader directory, uses O_NOFOLLOW and exclusive staging/backup creation, and never executes payloads or changes credentials. See [helper source and build](../autoload-helper/README.md).
 
-An existing autoload.txt and sufficient /data permissions are required. Merely detecting an ELF loader on 9021 does not prove the current browser process can read/write /data. Permission or firmware-stub errors are shown; no success is reported until the saved TXT has been read back.
+An existing autoload.txt, jailbreak, an active ELF loader and sufficient native /data permissions are required. The page locks the shared syscall sender while the editor is open. If the native helper cannot open the directory, its actual errno is displayed. No success is reported until the saved TXT has been read back.
 
 !500 means 500 ms. Supported edited waits: 0–3600000 ms, up to 256 steps and 64 KiB of text. Simple relative ASCII ELF names are editable; unusual existing lines are retained literally. No payload is executed by saving: the new sequence is for the next autoloader run. USB and title-specific configurations may take priority over this /data configuration.
 
@@ -40,12 +40,10 @@ The CI test uses an in-memory filesystem and a simulated syscall runtime to cove
 This has not been tested on real PS5 hardware. The original jailbreak implementation is unchanged; only the editor integration and file operations were added.
 
 
-## PS5 file-access fallback (v2)
+## Native helper (v3)
 
-When the first direct read fails, the editor tries the console's FTP payload at **127.0.0.1:2121**. Start ftpsrv-ps5.elf from the payload menu (or your autoload sequence) before opening the editor. Only anonymous login is currently supported. No external FTP address can be entered: passive data connections also use loopback, regardless of the advertised PASV host.
+The old direct-syscall/FTP fallback is superseded by the native helper. Generic socket transport remains in autoload-ftp.js, but opening the editor no longer connects to FTP.
 
-Once a successful read chooses a transport, all saves use that same transport; the editor never switches halfway through a write. The existing backup, staging, conflict checks, byte-for-byte readback and delayed deletion rules also apply to FTP. FTP completion/readback is checked, but the FTP server does not expose an explicit fsync or O_EXCL/O_NOFOLLOW equivalent. Collision checks use SIZE and unique temporary names. An access-denied response never permits STOR. Use the expected ftpsrv server; a custom authenticated server requires additional configuration.
+CI compiles the PS5 ELF with the pinned official SDK and tests the actual C server against the JavaScript client on Linux, including the supplied sequence, backups, byte-for-byte ELF copying, deletion, session restart, staging collisions and symlink refusal. The source commit and ELF hash are recorded in autoload-helper/build.json. Console loading, file permissions and first-open text rendering still require hardware verification.
 
-The GitHub Pages UI cannot inherit a separate ELF's filesystem permissions. In ps5-webkit-autoloader, payloads/autoload.js sends autoload.elf to elfldr; the independent ps5-unified-autoloader process opens the TXT using fopen. It is not the JavaScript page that opens the file.
-
-The PS5 modal now uses an opaque background, explicit WebKit text colors and a layout/animation-frame repaint before starting file I/O. First-open hardware rendering remains to be checked on the console.
+The PS5 modal uses an opaque background, explicit WebKit text colors and a layout/animation-frame repaint before file I/O.
