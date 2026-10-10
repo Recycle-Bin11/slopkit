@@ -130,6 +130,55 @@ async function save(io, rows, catalog = [{name:"new.elf"}], download = async () 
     const page = fs.readFileSync("slopkit/poops.html","utf8");
     assert(page.includes('id="editAutoload"') && page.includes('id="autoloadSave"'));
     assert(page.indexOf("autoload-core.js") < page.indexOf("window.mountAutoloadEditor("));
+
+    // Evaluate the actual canonical route validator against the main-menu URLs.
+    const index = fs.readFileSync("index.html","utf8");
+    const autoloadLink = index.match(/id="run-autoload"[\s\S]*?href="([^"]+)"/)[1].replace(/&amp;/g,"&");
+    const senderLink = index.match(/id="run-sender"[\s\S]*?href="([^"]+)"/)[1].replace(/&amp;/g,"&");
+    const routeCode = page.slice(page.indexOf("const STAGE5_DRY_QUERY"), page.indexOf("function cleanNegativeCheckpoint"));
+    const only = page.match(/const STAGE5_ONLY = ([\s\S]*?);/)[1];
+    function validate(href) {
+        const context={ Q:new URL(href,"https://example.test/").searchParams, window:{fw_str:"10.00"}, URLSearchParams };
+        vm.runInNewContext("const ROUTE_VERSION='final'; const STAGE5_ONLY="+only+"; const STAGE5_FIRMWARES=['10.00'];\n"+routeCode+
+            "\nresult={production:PRODUCTION_RUN,error:PRODUCTION_REQUEST_ERROR,stage:STAGE5_REQUEST_ERROR};",context);
+        return context.result;
+    }
+    assert.equal(validate(autoloadLink).error,"");
+    assert.equal(validate(autoloadLink).stage,"");
+    assert(validate(autoloadLink).production);
+    assert.equal(validate(senderLink).error,"");
+    const freshLink = new URL(autoloadLink,"https://example.test/");
+    freshLink.searchParams.delete("reuse");
+    assert.equal(validate(freshLink.href).error,"");
+    assert.equal(validate(freshLink.href).stage,"");
+    assert(validate(freshLink.href).production);
+    for (const suffix of ["&unexpected=1","&autoload=1"]) assert(validate(autoloadLink+suffix).error);
+    assert(validate(autoloadLink.replace("v=final","v=autoload-3")).error);
+    assert(validate(autoloadLink.replace("autoload=1","autoload=2")).error);
+    // Exercise the actual reuse branch: hit, miss, and probe failure.
+    const start=page.indexOf("    if (REUSE_ELFLDR) {",page.indexOf("(async function entry()"));
+    const reuseCode=page.slice(start,page.indexOf("    if (PRODUCTION_RUN) {",start));
+    async function reuseScenario(href,probe) {
+        const events=[];
+        const context={Q:new URL(href,"https://example.test/").searchParams,REUSE_ELFLDR:true,
+            PRODUCTION_HREF:freshLink.href.replace("&autoload=1",""),
+            screenLine:()=>{},stage:()=>{},flushMark:()=>{},sendRemoteEvents:()=>{},clean:x=>x,
+            bootChain:async()=>events.push("boot"),refreshConsoleNetworkInfo:async()=>{},
+            probeExistingElfLoader:async()=>{events.push("probe");if(probe==="error")throw new Error("probe error");return probe;},
+            openExistingPayloadMenu:()=>events.push("open"),showLoaderPrompt:()=>events.push("prompt"),
+            location:{replace:url=>events.push(url)}};
+        await vm.runInNewContext("(async()=>{"+reuseCode+"})()",context);
+        return events;
+    }
+    assert.deepEqual(await reuseScenario(autoloadLink,true),["boot","probe","open"]);
+    const miss=await reuseScenario(autoloadLink,false);
+    assert.deepEqual(miss.slice(0,2),["boot","probe"]);
+    assert.equal(validate(miss[2]).error,"");
+    assert.equal(new URL(miss[2]).searchParams.get("autoload"),"1");
+    assert.equal(new URL(miss[2]).searchParams.has("reuse"),false);
+    assert.deepEqual(await reuseScenario(senderLink,false),["boot","probe","prompt"]);
+    assert.deepEqual(await reuseScenario(autoloadLink,"error"),["boot","probe"]);
+
     // Parse the existing inline module along with the inserted runtime bridge.
     const match = page.match(/<script type="module">([\s\S]*?)<\/script>/);
     assert(match);

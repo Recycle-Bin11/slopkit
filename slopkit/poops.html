@@ -662,6 +662,12 @@ const REUSE_QUERY = Object.freeze({
     attempts: "8", only: STAGE5_ONLY, log: "debug", payload: "1",
     reuse: "1", v: ROUTE_VERSION
 });
+const AUTOLOAD_QUERY = Object.freeze({ ...PRODUCTION_QUERY, autoload: "1" });
+const AUTOLOAD_REUSE_QUERY = Object.freeze({ ...REUSE_QUERY, autoload: "1" });
+function isProductionQuery() {
+    return [PRODUCTION_QUERY, REUSE_QUERY, AUTOLOAD_QUERY, AUTOLOAD_REUSE_QUERY]
+        .some(expected => exactQuery(expected));
+}
 const STAGE5_INTENT = Q.has("stage5") || Q.has("payload")
     || Q.getAll("proof").some(value => value.indexOf("stage5") === 0)
     || Q.getAll("only").some(value => value.split(",")
@@ -682,7 +688,7 @@ function exactQuery(expected) {
 const STAGE5_REQUEST_ERROR = (() => {
     if (!STAGE5_INTENT) return "";
     if (!exactQuery(STAGE5_DRY_QUERY) && !exactQuery(STAGE5_LIVE_QUERY)
-        && !exactQuery(PRODUCTION_QUERY) && !exactQuery(REUSE_QUERY))
+        && !isProductionQuery())
         return "noncanonical-stage5-request";
     return STAGE5_FIRMWARES.indexOf(window.fw_str) >= 0
         ? "" : "unsupported-stage5-firmware";
@@ -690,10 +696,10 @@ const STAGE5_REQUEST_ERROR = (() => {
 
 const PRODUCTION_REQUEST_ERROR = (() => {
     if (!Q.has("production") && !Q.has("auto") && !Q.has("next")) return "";
-    return exactQuery(PRODUCTION_QUERY) || exactQuery(REUSE_QUERY)
+    return isProductionQuery()
         ? "" : "noncanonical-production-request";
 })();
-const PRODUCTION_RUN = exactQuery(PRODUCTION_QUERY) || exactQuery(REUSE_QUERY);
+const PRODUCTION_RUN = isProductionQuery();
 
 function cleanNegativeCheckpoint(last) {
     return last && last.rev === REV && last.checkpoint === true
@@ -2608,6 +2614,12 @@ window.mountAutoloadEditor({
                 return;
             }
             flushMark("ELFLDR-REUSE-MISS", "127.0.0.1-port=9021-closed");
+            if (Q.get("autoload") === "1") {
+                stage("No hay cargador activo; iniciando jailbreak para abrir el editor.");
+                location.replace(PRODUCTION_HREF + "&autoload=1");
+                sendRemoteEvents(false);
+                return;
+            }
             stage("no ELF loader found", "bad");
             showLoaderPrompt();
             sendRemoteEvents(false);
