@@ -1,0 +1,66 @@
+name: Build and test autoload editor helper
+on:
+  push:
+    branches: [feat/autoload-native-helper]
+    paths:
+      - 'autoload-helper/**'
+      - 'slopkit/autoload-*.js'
+      - 'slopkit/poops.html'
+      - 'index.html'
+      - '_data/payloads.json'
+      - '.github/scripts/check_autoload_bridge.cjs'
+      - '.github/workflows/build-autoload-helper.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install compiler and pinned SDK
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y clang-18 lld-18 make unzip
+          sudo ln -sf /usr/bin/clang-18 /usr/local/bin/clang
+          sudo ln -sf /usr/bin/clang++-18 /usr/local/bin/clang++
+          sudo ln -sf /usr/bin/ld.lld-18 /usr/local/bin/ld.lld
+          curl --fail --location --silent --show-error -o /tmp/ps5-sdk.zip https://github.com/ps5-payload-dev/sdk/releases/download/v0.42/ps5-payload-sdk.zip
+          echo '8cfbc7cd5811e719eb4f0c47eea668d3dc7b40bc8ab11c4a5031d40c23ec02da  /tmp/ps5-sdk.zip' | sha256sum -c -
+          sudo unzip -q /tmp/ps5-sdk.zip -d /opt
+      - name: Compile helper and native test server
+        run: |
+          make -C autoload-helper
+          cp autoload-helper/autoload-editor-helper.elf payloads/
+          sha256sum payloads/autoload-editor-helper.elf > payloads/autoload-editor-helper.elf.sha256
+          clang-18 -DAUTOLOAD_HOST_TEST -Wall -Wextra -Werror -o /tmp/autoload-helper-test autoload-helper/bridge.c
+      - name: Check editor and native protocol
+        run: |
+          node --check slopkit/autoload-core.js
+          node --check slopkit/autoload-ui.js
+          node --check slopkit/autoload-bridge.js
+          node .github/scripts/check_autoload_editor.cjs
+          node --check /tmp/slopkit-autoload-module.mjs
+          node .github/scripts/check_autoload_bridge.cjs /tmp/autoload-helper-test
+      - name: Record and publish compiled ELF on the feature branch
+        if: github.ref == 'refs/heads/feat/autoload-native-helper'
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess
+          info = {"source_commit":subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip(),"sdk":"v0.42","sdk_sha256":"8cfbc7cd5811e719eb4f0c47eea668d3dc7b40bc8ab11c4a5031d40c23ec02da","compiler":"LLVM 18","binary_sha256":hashlib.sha256(pathlib.Path("payloads/autoload-editor-helper.elf").read_bytes()).hexdigest(),"binary_size":pathlib.Path("payloads/autoload-editor-helper.elf").stat().st_size}
+          pathlib.Path("autoload-helper/build.json").write_text(json.dumps(info,indent=2)+"\n")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add payloads/autoload-editor-helper.elf payloads/autoload-editor-helper.elf.sha256 autoload-helper/build.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Build and verify autoload editor helper ELF"
+            git push origin HEAD:feat/autoload-native-helper
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: autoload-editor-helper
+          path: |
+            payloads/autoload-editor-helper.elf
+            payloads/autoload-editor-helper.elf.sha256
+            autoload-helper/build.json

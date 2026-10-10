@@ -348,6 +348,7 @@
 
   #wrap { display:none !important; }
 
+#editAutoload[hidden] { display:none !important; }
 #editAutoload { padding:.5rem 1rem; margin:.5rem; border:1px solid #aaa; border-radius:.6rem; background:#202125; color:#fff; font-size:1rem; cursor:pointer; }
 #autoloadEditor[hidden] { display:none !important; }
 #autoloadEditor { position:fixed; inset:0; z-index:10000; overflow-y:auto; background:#080a0ef5; font:18px/1.5 Arial,sans-serif; padding:24px; box-sizing:border-box; color:#fff; }
@@ -424,7 +425,7 @@
       <h2>PS5 SlopKit Payloads (9.00-12.00)</h2>
       <div class="payloadEyebrow" id="payloadNetworkStatus">Listening on console port 9021</div>
       <p id="payloadProgress">Select a payload to send it to the ELF loader.</p>
-<button id="editAutoload" type="button" aria-controls="autoloadEditor" aria-expanded="false">Editar autoload</button>
+<button hidden id="editAutoload" type="button" aria-controls="autoloadEditor" aria-expanded="false">Editar autoload</button>
       <span class="homeLink homeLinkDisabled" aria-disabled="true">Jailbreak Active</span>
     </div>
     <div class="payloadGrid"></div>
@@ -451,6 +452,7 @@
     <div class="autoloadActions">
       <button id="autoloadRead" type="button">Leer desde PS5 / descartar cambios</button>
       <button id="autoloadClose" type="button">Cerrar sin guardar</button>
+      <a href="../index.html" id="autoloadHome" class="homeLink">Menú principal</a>
     </div>
     <p id="autoloadStatus" role="status" aria-live="polite"></p>
     <h3>Secuencia</h3>
@@ -489,7 +491,8 @@
 <script src="autoload-core.js?v=1"></script>
 <script src="autoload-ps5.js?v=1"></script>
 <script src="autoload-ftp.js?v=2"></script>
-<script src="autoload-ui.js?v=2"></script>
+<script src="autoload-bridge.js?v=3"></script>
+<script src="autoload-ui.js?v=3"></script>
 
 <script type="module">import { establishPrimitive, fakeCellReleased } from "./core.js?v=final";
 import { installWindowP, pairStatus } from "./mem.js?v=final";
@@ -1126,6 +1129,18 @@ function setPayloadTileBusy(tile, busy) {
 function showPayloadMenu(readyState) {
     const ready = readyState !== false;
     populatePayloadButtons();
+    if (ready && Q.get("autoload") === "1" && !autoloadAutoOpened) {
+        autoloadAutoOpened = true;
+        let attempts = 0;
+        function openWhenIdle() {
+            if (runInFlight || payloadSendBusy) {
+                if (++attempts < 100) setTimeout(openWhenIdle, 100);
+                return;
+            }
+            document.getElementById("editAutoload").click();
+        }
+        setTimeout(openWhenIdle, 0);
+    }
 
     const prompt = document.getElementById("loaderPrompt");
     prompt.classList.remove("on");
@@ -1234,7 +1249,7 @@ function showLoaderPrompt() {
         promptButtons[i].removeAttribute("style");
     }
     const button = document.getElementById("promptJailbreak");
-    button.href = PRODUCTION_HREF;
+    button.href = PRODUCTION_HREF + (Q.get("autoload") === "1" ? "&autoload=1" : "");
     try { button.focus(); } catch (e) { }
 }
 
@@ -1315,7 +1330,7 @@ function preparePayloadSender() {
     }
 }
 
-async function sendPayloadToElfldr(name) {
+async function sendPayloadToElfldr(name, internalHelper) {
     if (!elfldrSpawned)
         throw new Error("ELF loader is not ready");
     if (!P || !chain)
@@ -1324,7 +1339,7 @@ async function sendPayloadToElfldr(name) {
         throw new Error("the ROP chain is unusable after " + chainDead);
     if (payloadSenderBlocked)
         throw new Error(payloadSenderBlocked);
-    if (!payloadIsListed(name))
+    if (!payloadIsListed(name) && !(internalHelper === true && name === "autoload-editor-helper.elf"))
         throw new Error("payload is not listed in this menu");
 
     const response = await fetch("../payloads/" + encodeURIComponent(name),
@@ -2514,6 +2529,7 @@ function lastRunText() {
 
 
 let autoloadIO = null;
+let autoloadAutoOpened = false;
 window.mountAutoloadEditor({
     catalog: () => PAYLOADS,
     ready: () => {
@@ -2522,39 +2538,15 @@ window.mountAutoloadEditor({
         if (payloadSenderBlocked) throw new Error(payloadSenderBlocked);
     },
     io: () => {
-        if (!autoloadIO) {
-            const direct = window.createAutoloadPS5IO({ mem, sys });
-            const ftp = window.createAutoloadFTP(window.createAutoloadTCP({
+        if (!autoloadIO) autoloadIO = window.createAutoloadBridge(
+            window.createAutoloadTCP({
                 mem, sys, block: message => { payloadSenderBlocked = message; }
-            }));
-            let selected = null;
-            autoloadIO = {
-                mode: () => selected === ftp ? "FTP local (2121)" : "acceso directo",
-                read: async (name, max) => {
-                    if (selected) return selected.read(name, max);
-                    try {
-                        const bytes = await direct.read(name, max);
-                        selected = direct; return bytes;
-                    } catch (directError) {
-                        if (chainDead || payloadSenderBlocked) throw directError;
-                        try {
-                            const bytes = await ftp.read(name, max);
-                            selected = ftp; return bytes;
-                        } catch (ftpError) {
-                            throw new Error("No se pudo leer /data/ps5_autoloader/" + name
-                                + ". Acceso directo: " + directError.message
-                                + " FTP: " + ftpError.message
-                                + ". Iniciá ftpsrv en la PS5 (puerto 2121), comprobá la ruta y pulsá Leer desde PS5.");
-                        }
-                    }
-                },
-                create: (name, bytes) => selected.create(name, bytes),
-                rename: (from, to) => selected.rename(from, to),
-                remove: name => selected.remove(name)
-            };
-        }
+            }),
+            async () => { await sendPayloadToElfldr("autoload-editor-helper.elf", true); }
+        );
         return autoloadIO;
     },
+    resetIO: () => { autoloadIO = null; },
     acquire: () => {
         if (payloadSendBusy || runInFlight) throw new Error("Esperá a que termine la operación actual.");
         payloadSendBusy = true;

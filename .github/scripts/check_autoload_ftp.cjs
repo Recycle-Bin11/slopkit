@@ -91,7 +91,7 @@ function mock(options={}) {
     const page=fs.readFileSync("slopkit/poops.html","utf8");
     assert(page.includes("background:#0c0c0f; opacity:1"));
     assert(page.includes("-webkit-text-fill-color:#fff !important"));
-    assert(page.includes('selected = ftp; return bytes'));
+    assert(page.includes('createAutoloadBridge') && !page.includes('selected = ftp; return bytes'));
     const ui=fs.readFileSync("slopkit/autoload-ui.js","utf8");
     assert(ui.includes("repaint()") && ui.includes("panel.scrollTop = 0"));
     console.log("FTP tests passed: fragmented/multiline replies, binary transfers, scoped paths, passive port checks, staging collision protection, rename/delete and cleanup.");
